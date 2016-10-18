@@ -12,6 +12,9 @@ import GHC.Generics
 import Control.DeepSeq
 import Crypto.PVSS.ECC
 import Data.ByteString (ByteString)
+import           Data.Binary
+import           Data.Binary.Get (getByteString)
+import           Data.Binary.Put (putByteString)
 
 data DLEQ = DLEQ
     { dleq_g1 :: !Point -- ^ g1 parameter
@@ -29,6 +32,7 @@ data Proof = Proof
     , proof_z  :: !Scalar
     } deriving (Show,Eq,Generic)
 
+instance Binary Proof
 instance NFData Proof
 
 -- | Generate a proof

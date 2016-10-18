@@ -43,6 +43,9 @@ import           GHC.Generics
 
 import           Data.ByteString (ByteString)
 import           Data.List (foldl')
+import           Data.Binary
+import           Data.Binary.Get (getWord32le)
+import           Data.Binary.Put (putWord32le)
 
 import           Crypto.Random
 import           Crypto.PVSS.Polynomial (Polynomial(..))
@@ -51,7 +54,7 @@ import qualified Crypto.PVSS.DLEQ as DLEQ
 import           Crypto.PVSS.ECC
 
 newtype Commitment = Commitment { unCommitment :: Point }
-    deriving (Show,Eq,NFData)
+    deriving (Show,Eq,NFData,Binary)
 
 -- | The number of shares needed to reconstitute the secret
 type Threshold = Integer
@@ -64,7 +67,7 @@ type ShareId = Integer
 
 -- | Extra generator
 newtype ExtraGen = ExtraGen Point
-    deriving (Show,Eq,NFData)
+    deriving (Show,Eq,NFData,Binary)
 
 -- | An encrypted share associated to a party's key.
 data EncryptedShare = EncryptedShare
@@ -74,6 +77,9 @@ data EncryptedShare = EncryptedShare
     } deriving (Show,Eq,Generic)
 
 instance NFData EncryptedShare
+instance Binary EncryptedShare where
+    get = EncryptedShare <$> (fromIntegral <$> getWord32le) <*> get <*> get
+    put (EncryptedShare sid val proof) = putWord32le (fromIntegral sid) >> put val >> put proof
 
 -- | An decrypted share decrypted by a party's key and
 data DecryptedShare = DecryptedShare
@@ -83,6 +89,9 @@ data DecryptedShare = DecryptedShare
     } deriving (Show,Eq,Generic)
 
 instance NFData DecryptedShare
+instance Binary DecryptedShare where
+    get = DecryptedShare <$> (fromIntegral <$> getWord32le) <*> get <*> get
+    put (DecryptedShare sid val proof) = putWord32le (fromIntegral sid) >> put val >> put proof
 
 -- | Prepare a new escrowing context
 --

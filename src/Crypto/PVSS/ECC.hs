@@ -30,6 +30,9 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteArray as B (convert)
 import           Data.Bits
+import           Data.Binary
+import           Data.Binary.Get (getByteString)
+import           Data.Binary.Put (putByteString)
 
 import           GHC.Generics
 import           Control.DeepSeq
@@ -54,7 +57,7 @@ data KeyPair = KeyPair Scalar Point
 instance NFData KeyPair
 
 newtype DhSecret = DhSecret ByteString
-    deriving (Show,Eq,NFData)
+    deriving (Show,Eq,NFData,Binary)
 
 keyFromBytes :: ByteString -> Scalar
 keyFromBytes = keyFromNum . os2ip
@@ -77,9 +80,17 @@ instance Show Point where
          in ("Point " ++ show x ++ " " ++ show y)
 instance Eq Point where
     (Point a) == (Point b) = SSL.ecPointEq p256 a b
+instance Binary Point where
+    put = putByteString
+        . flip (SSL.ecPointToOct p256) SSL.PointConversion_Compressed
+        . unPoint
+    get = either fail (return . Point) . SSL.ecPointFromOct p256 =<< getByteString 33
 
 newtype Scalar = Scalar Integer
     deriving (Show,Eq,Generic,NFData)
+instance Binary Scalar where
+    put (Scalar i) = putByteString $ i2ospOf_ 32 i
+    get = keyFromBytes <$> getByteString 32
 
 keyFromNum :: Integer -> Scalar
 keyFromNum n = Scalar (n `mod` SSL.ecGroupGetOrder p256)
