@@ -12,12 +12,14 @@ module Crypto.PVSS
     , ShareId
     , ExtraGen
     , Point
+    , Scalar
     , KeyPair(..)
+    , DhSecret(..)
     -- * Types
     , Escrow(..)
     , Commitment
-    , EncryptedShare
-    , DecryptedShare
+    , EncryptedShare(..)
+    , DecryptedShare(..)
     -- * method
     , escrow
     , escrowWith
