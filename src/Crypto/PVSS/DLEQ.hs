@@ -25,10 +25,15 @@ data DLEQ = DLEQ
 
 instance NFData DLEQ
 
+newtype Challenge = Challenge ByteString
+    deriving (Show,Eq,NFData)
+instance Binary Challenge where
+    put (Challenge c) = put c
+    get = Challenge <$> getByteString 32
+
 -- | The generated proof
 data Proof = Proof
-    { proof_a1 :: !Point
-    , proof_a2 :: !Point
+    { proof_c  :: !Challenge
     , proof_z  :: !Scalar
     } deriving (Show,Eq,Generic)
 
@@ -40,23 +45,21 @@ generate :: Scalar -- ^ random value
          -> Scalar -- ^ a
          -> DLEQ   -- ^ DLEQ parameters to generate from
          -> Proof
-generate w a pp@(DLEQ g1 h1 g2 h2) = proof
+generate w a pp@(DLEQ g1 h1 g2 h2) = Proof (Challenge c) r
   where
-    proof  = Proof a1 a2 r
     a1     = g1 .* w
     a2     = g2 .* w
-    c      = hashPointsToKey [h1,h2,a1,a2]
-    r      = w #+ (a #* c)
+    c      = hashPoints [h1,h2,a1,a2]
+    r      = w #+ (a #* keyFromBytes c)
 
 -- | Verify a proof
 verify :: DLEQ  -- ^ DLEQ parameter used to verify
        -> Proof -- ^ the proof to verify
        -> Bool
-verify (DLEQ g1 h1 g2 h2) (Proof a1 a2 r) = (r1 == v1) && (r2 == v2)
+verify (DLEQ g1 h1 g2 h2) (Proof (Challenge ch) r) = ch == hashPoints [h1,h2,a1,a2]
   where
     r1 = g1 .* r
     r2 = g2 .* r
-
-    c  = hashPointsToKey [h1,h2,a1,a2]
-    v1 = a1 .+ (h1 .* c)
-    v2 = a2 .+ (h2 .* c)
+    c = keyFromBytes ch
+    a1 = r1 .- (h1 .* c)
+    a2 = r2 .- (h2 .* c)

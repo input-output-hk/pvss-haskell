@@ -12,6 +12,7 @@ module Crypto.PVSS.ECC
     , pointIdentity
     , keyPairGenerate
     , keyGenerate
+    , keyFromBytes
     , keyFromNum
     , keyInverse
     , (#+)
@@ -19,8 +20,10 @@ module Crypto.PVSS.ECC
     , (#*)
     , (#^)
     , (.+)
+    , (.-)
     , (.*)
     , (*.)
+    , hashPoints
     , hashPointsToKey
     ) where
 
@@ -122,6 +125,11 @@ pointFromSecret (Scalar s) = Point $ SSL.ecPointGeneratorMul p256 s
 pointIdentity :: Point
 pointIdentity = Point $ SSL.ecPointInfinity p256
 
+hashPoints :: [Point] -> ByteString
+hashPoints elements =
+    B.convert $ hashSHA256 $ mconcat
+              $ fmap (flip (SSL.ecPointToOct p256) SSL.PointConversion_Compressed . unPoint) elements
+
 hashPointsToKey :: [Point] -> Scalar
 hashPointsToKey elements =
     keyFromBytes $ B.convert $ hashSHA256 $ mconcat
@@ -133,6 +141,10 @@ curveGenerator = Point $ SSL.ecGroupGetGenerator p256
 -- | Point adding
 (.+) :: Point -> Point -> Point
 (.+) (Point a) (Point b) = Point (SSL.ecPointAdd p256 a b)
+
+-- | Point subtraction
+(.-) :: Point -> Point -> Point
+(.-) (Point a) (Point b) = Point (SSL.ecPointAdd p256 a $ SSL.ecPointInvert p256 b)
 
 -- | Point scaling
 (.*) :: Point -> Scalar -> Point
