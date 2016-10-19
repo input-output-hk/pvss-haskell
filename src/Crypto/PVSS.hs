@@ -12,6 +12,7 @@ module Crypto.PVSS
     , ShareId
     , ExtraGen
     , Point
+    , DLEQ.Proof
     , Scalar
     , Secret
     , KeyPair(..)
