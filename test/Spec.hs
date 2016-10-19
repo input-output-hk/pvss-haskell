@@ -33,7 +33,7 @@ testEncryptVerify (Threshold threshold) (Participants nOrig) rng =
 
     (participants, rng2) = withDRG rng $ replicateM (fromIntegral n) PVSS.keyPairGenerate
 
-    ((egen, sec, commitments, eshares), rng3) = withDRG rng2 $
+    ((egen, sec, _, commitments, eshares), rng3) = withDRG rng2 $
         PVSS.escrow threshold (map toPk participants)
 
 testDecryptVerify :: Threshold -> Participants -> ChaChaDRG -> Property
@@ -46,11 +46,23 @@ testDecryptVerify (Threshold threshold) (Participants nOrig) rng =
 
     (participants, rng2) = withDRG rng $ replicateM (fromIntegral n) PVSS.keyPairGenerate
 
-    ((egen, sec, commitments, eshares), rng3) = withDRG rng2 $
+    ((egen, sec, _, commitments, eshares), rng3) = withDRG rng2 $
         PVSS.escrow threshold (map toPk participants)
 
     (decryptedShares, _) = withDRG rng3 $ do
         mapM (\(kp,eshare) -> PVSS.shareDecrypt kp eshare) (zip participants eshares)
+
+testSecretVerify :: Threshold -> Participants -> ChaChaDRG -> Property
+testSecretVerify (Threshold threshold) (Participants nOrig) rng =
+    PVSS.verifySecret egen commitments sec secProof === True
+  where
+    n :: Integer
+    n = max (threshold) nOrig
+
+    (participants, rng2) = withDRG rng $ replicateM (fromIntegral n) PVSS.keyPairGenerate
+
+    ((egen, sec, secProof, commitments, _), rng3) = withDRG rng2 $
+        PVSS.escrow threshold (map toPk participants)
 
 testRecovery :: Threshold -> Participants -> ChaChaDRG -> Property
 testRecovery (Threshold threshold) (Participants nOrig) rng =
@@ -64,7 +76,7 @@ testRecovery (Threshold threshold) (Participants nOrig) rng =
 
     (participants, rng2) = withDRG rng $ replicateM (fromIntegral n) PVSS.keyPairGenerate
 
-    ((egen, sec, commitments, eshares), rng3) = withDRG rng2 $
+    ((egen, sec, _, commitments, eshares), rng3) = withDRG rng2 $
         PVSS.escrow threshold (map toPk participants)
 
     (decryptedShares, _) = withDRG rng3 $ do
@@ -74,4 +86,5 @@ main :: IO ()
 main = defaultMain $ testGroup "PVSS"
     [ testProperty "encrypted-verified" testEncryptVerify
     , testProperty "decrypted-verified" testDecryptVerify
+    , testProperty "secret-verified" testSecretVerify
     , testProperty "recovery" testRecovery ]

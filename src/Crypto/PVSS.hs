@@ -13,6 +13,7 @@ module Crypto.PVSS
     , ExtraGen
     , Point
     , Scalar
+    , Secret
     , KeyPair(..)
     , DhSecret(..)
     -- * Types
@@ -30,8 +31,10 @@ module Crypto.PVSS
     , shareDecrypt
     , verifyEncryptedShare
     , verifyDecryptedShare
+    , verifySecret
     , getValidRecoveryShares
     , recover
+    , secretToDhSecret
     -- * temporary export to get testing
     , keyPairGenerate
     ) where
@@ -69,6 +72,14 @@ type ShareId = Integer
 newtype ExtraGen = ExtraGen Point
     deriving (Show,Eq,NFData,Binary)
 
+-- | Secret
+newtype Secret = Secret Point
+    deriving (Show,Eq,NFData,Binary)
+
+-- | Transform a secret into a usable random value
+secretToDhSecret :: Secret -> DhSecret
+secretToDhSecret (Secret p) = pointToDhSecret p
+
 -- | An encrypted share associated to a party's key.
 data EncryptedShare = EncryptedShare
     { shareID           :: !ShareId
@@ -93,6 +104,15 @@ instance Binary DecryptedShare where
     get = DecryptedShare <$> (fromIntegral <$> getWord32le) <*> get <*> get
     put (DecryptedShare sid val proof) = putWord32le (fromIntegral sid) >> put val >> put proof
 
+data Escrow = Escrow
+    { escrowExtraGen   :: !ExtraGen
+    , escrowPolynomial :: !Polynomial
+    , escrowSecret     :: !Secret
+    , escrowProof      :: !DLEQ.Proof
+    } deriving (Show,Eq,Generic)
+
+instance NFData Escrow
+
 -- | Prepare a new escrowing context
 --
 -- The only needed parameter is the threshold
@@ -105,11 +125,16 @@ escrowNew threshold = do
     gen  <- pointFromSecret <$> keyGenerate
 
     let secret = Polynomial.atZero poly
-        gS = pointToDhSecret (pointFromSecret secret)
+        gS     = pointFromSecret secret
+    challenge <- keyGenerate
+    let dleq  = DLEQ.DLEQ { DLEQ.dleq_g1 = curveGenerator, DLEQ.dleq_h1 = gS, DLEQ.dleq_g2 = gen, DLEQ.dleq_h2 = gen .* secret }
+        proof = DLEQ.generate challenge secret dleq
+
     return $ Escrow
         { escrowExtraGen   = ExtraGen gen
         , escrowPolynomial = poly
-        , escrowSecret     = gS
+        , escrowSecret     = Secret gS
+        , escrowProof      = proof
         }
 
 -- | Prepare a secret into public encrypted shares for distributions using the PVSS scheme
@@ -121,11 +146,11 @@ escrowNew threshold = do
 escrow :: MonadRandom randomly
        => Threshold        -- ^ PVSS scheme configuration n/t threshold
        -> [Point]          -- ^ Participants public keys
-       -> randomly (ExtraGen, DhSecret, [Commitment], [EncryptedShare])
+       -> randomly (ExtraGen, Secret, DLEQ.Proof, [Commitment], [EncryptedShare])
 escrow t pubs = do
     e <- escrowNew t
     (commitments, eshares) <- escrowWith e pubs
-    return (escrowExtraGen e, escrowSecret e, commitments, eshares)
+    return (escrowExtraGen e, escrowSecret e, escrowProof e, commitments, eshares)
 
 -- | Escrow with a given polynomial
 escrowWith :: MonadRandom randomly
@@ -139,14 +164,6 @@ escrowWith escrow pubs = do
     encryptedShares <- sharesCreate escrow commitments pubs
 
     return (commitments, encryptedShares)
-
-data Escrow = Escrow
-    { escrowExtraGen   :: !ExtraGen
-    , escrowPolynomial :: !Polynomial
-    , escrowSecret     :: !DhSecret
-    } deriving (Show,Eq,Generic)
-
-instance NFData Escrow
 
 createCommitments :: Escrow -> [Commitment]
 createCommitments escrow =
@@ -225,14 +242,29 @@ verifyDecryptedShare (eshare,pub,share) =
     DLEQ.verify dleq (decryptedValidProof share)
   where dleq = DLEQ.DLEQ curveGenerator pub (shareDecryptedVal share) (shareEncryptedVal eshare)
 
+-- | Verify that a secret recovered is the one escrow
+verifySecret :: ExtraGen
+             -> [Commitment]
+             -> Secret
+             -> DLEQ.Proof
+             -> Bool
+verifySecret (ExtraGen gen) commitments (Secret secret) proof =
+    DLEQ.verify dleq proof
+  where dleq = DLEQ.DLEQ
+            { DLEQ.dleq_g1 = curveGenerator
+            , DLEQ.dleq_h1 = secret
+            , DLEQ.dleq_g2 = gen
+            , DLEQ.dleq_h2 = unCommitment (commitments !! 0)
+            }
+
 -- | Recover the DhSecret used
 --
 -- Need to pass the correct amount of shares (threshold),
 -- preferably from a 'getValidRecoveryShares' call
 recover :: [DecryptedShare]
-        -> DhSecret
+        -> Secret
 recover shares =
-    pointToDhSecret $ foldl' interpolate pointIdentity (zip shares [0..])
+    Secret $ foldl' interpolate pointIdentity (zip shares [0..])
   where
     t = fromIntegral $ length shares
 
