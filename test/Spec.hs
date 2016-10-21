@@ -21,8 +21,8 @@ instance Show ChaChaDRG where
 instance Arbitrary ChaChaDRG where
     arbitrary = arbitrary >>= \n -> return $ drgNewTest (0,0,0,0,n)
 
-toPk :: PVSS.KeyPair -> PVSS.Point
-toPk (PVSS.KeyPair _ p) = p
+toPk :: PVSS.KeyPair -> PVSS.PublicKey
+toPk = PVSS.toPublicKey
 
 testEncryptVerify :: Threshold -> Participants -> ChaChaDRG -> Property
 testEncryptVerify (Threshold threshold) (Participants nOrig) rng =

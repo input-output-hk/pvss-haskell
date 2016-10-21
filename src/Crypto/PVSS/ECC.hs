@@ -4,6 +4,8 @@
 module Crypto.PVSS.ECC
     ( Point(..)
     , Scalar(..)
+    , PublicKey(..)
+    , PrivateKey(..)
     , KeyPair(..)
     , DhSecret(..)
     , curveGenerator
@@ -54,7 +56,10 @@ import Crypto.Number.Generate
 import qualified Crypto.PubKey.ECC.P256 as P256
 #endif
 
-data KeyPair = KeyPair Scalar Point
+data KeyPair = KeyPair
+    { toPrivateKey :: PrivateKey
+    , toPublicKey  :: PublicKey
+    }
     deriving (Show,Eq,Generic)
 
 instance NFData KeyPair
@@ -66,6 +71,14 @@ keyFromBytes :: ByteString -> Scalar
 keyFromBytes = keyFromNum . os2ip
   where os2ip :: ByteString -> Integer
         os2ip = B.foldl' (\a b -> (256 * a) .|. (fromIntegral b)) 0
+
+-- | Private Key
+newtype PrivateKey = PrivateKey Scalar
+    deriving (Show,Eq,NFData,Binary)
+
+-- | Public Key
+newtype PublicKey = PublicKey Point
+    deriving (Show,Eq,NFData,Binary)
 
 #ifdef OPENSSL
 
@@ -112,7 +125,7 @@ keyGenerate = Scalar <$> generateMax order
 keyPairGenerate :: MonadRandom randomly => randomly KeyPair
 keyPairGenerate = do
     k <- keyGenerate
-    return $ KeyPair k (pointFromSecret k)
+    return $ KeyPair (PrivateKey k) (PublicKey $ pointFromSecret k)
 
 pointToDhSecret :: Point -> DhSecret
 pointToDhSecret (Point p) =

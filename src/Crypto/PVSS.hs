@@ -15,6 +15,8 @@ module Crypto.PVSS
     , DLEQ.Proof
     , Scalar
     , Secret
+    , PublicKey(..)
+    , PrivateKey(..)
     , KeyPair(..)
     , DhSecret(..)
     -- * Types
@@ -146,7 +148,7 @@ escrowNew threshold = do
 --  * The encrypted shares that should be distributed to each partipants.
 escrow :: MonadRandom randomly
        => Threshold        -- ^ PVSS scheme configuration n/t threshold
-       -> [Point]          -- ^ Participants public keys
+       -> [PublicKey]      -- ^ Participants public keys
        -> randomly (ExtraGen, Secret, DLEQ.Proof, [Commitment], [EncryptedShare])
 escrow t pubs = do
     e <- escrowNew t
@@ -156,7 +158,7 @@ escrow t pubs = do
 -- | Escrow with a given polynomial
 escrowWith :: MonadRandom randomly
            => Escrow
-           -> [Point]    -- ^ Participants public keys
+           -> [PublicKey]    -- ^ Participants public keys
            -> randomly ([Commitment], [EncryptedShare])
 escrowWith escrow pubs = do
     let commitments = createCommitments escrow
@@ -166,6 +168,9 @@ escrowWith escrow pubs = do
 
     return (commitments, encryptedShares)
 
+-- | Create all the commitments
+-- 
+-- there is <threshold> commitments in the list
 createCommitments :: Escrow -> [Commitment]
 createCommitments escrow =
     -- create commitments Cj = g ^ aj
@@ -174,10 +179,11 @@ createCommitments escrow =
     Polynomial polyCoeffs = escrowPolynomial escrow
     ExtraGen g = escrowExtraGen escrow
 
+-- | Create all the encrypted share associated with specific public key
 sharesCreate :: MonadRandom randomly
              => Escrow
              -> [Commitment]
-             -> [Point]
+             -> [PublicKey]
              -> randomly [EncryptedShare]
 sharesCreate escrow commitments pubs = forM (zip [1..] pubs) $ uncurry (shareCreate escrow commitments)
 
@@ -186,9 +192,9 @@ shareCreate :: MonadRandom randomly
             => Escrow
             -> [Commitment]
             -> ShareId
-            -> Point
+            -> PublicKey
             -> randomly EncryptedShare
-shareCreate e commitments shareId pub = do
+shareCreate e commitments shareId (PublicKey pub) = do
     let pEvaled_i = Polynomial.evaluate poly (keyFromNum $ shareId)
         yi        = pub .* pEvaled_i
         xi        = g .* pEvaled_i -- createXi shareId commitments
@@ -211,7 +217,7 @@ shareDecrypt :: MonadRandom randomly
              => KeyPair
              -> EncryptedShare
              -> randomly DecryptedShare
-shareDecrypt (KeyPair xi yi) (EncryptedShare sid _Yi _) = do
+shareDecrypt (KeyPair (PrivateKey xi) (PublicKey yi)) (EncryptedShare sid _Yi _) = do
     challenge <- keyGenerate
     let dleq  = DLEQ.DLEQ curveGenerator yi si _Yi
         proof = DLEQ.generate challenge xi dleq
@@ -224,9 +230,9 @@ shareDecrypt (KeyPair xi yi) (EncryptedShare sid _Yi _) = do
 -- anyone can do that given the extra generator and the commitments
 verifyEncryptedShare :: ExtraGen
                      -> [Commitment]
-                     -> (EncryptedShare, Point) -- ^ the encrypted and the associated public key
+                     -> (EncryptedShare, PublicKey) -- ^ the encrypted and the associated public key
                      -> Bool
-verifyEncryptedShare (ExtraGen g) commitments (share,pub) =
+verifyEncryptedShare (ExtraGen g) commitments (share,PublicKey pub) =
     DLEQ.verify dleq (shareValidProof share)
   where dleq = DLEQ.DLEQ
                 { DLEQ.dleq_g1 = g
@@ -237,9 +243,9 @@ verifyEncryptedShare (ExtraGen g) commitments (share,pub) =
         xi = createXi (fromIntegral $ shareID share) commitments
 
 -- | Verify a decrypted share against the public key and the encrypted share
-verifyDecryptedShare :: (EncryptedShare, Point, DecryptedShare)
+verifyDecryptedShare :: (EncryptedShare, PublicKey, DecryptedShare)
                      -> Bool
-verifyDecryptedShare (eshare,pub,share) =
+verifyDecryptedShare (eshare,PublicKey pub,share) =
     DLEQ.verify dleq (decryptedValidProof share)
   where dleq = DLEQ.DLEQ curveGenerator pub (shareDecryptedVal share) (shareEncryptedVal eshare)
 
@@ -286,7 +292,7 @@ recover shares =
 
 -- | Get #Threshold decrypted share that are deemed valid
 getValidRecoveryShares :: Threshold
-                       -> [(EncryptedShare, Point, DecryptedShare)]
+                       -> [(EncryptedShare, PublicKey, DecryptedShare)]
                        -> [DecryptedShare]
 getValidRecoveryShares threshold shares =
     map thd . take (fromIntegral threshold) . filter verifyDecryptedShare $ shares

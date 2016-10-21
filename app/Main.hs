@@ -10,9 +10,6 @@ import           Data.Hourglass
 import           Time.Types
 import           Time.System
 
-toPk :: PVSS.KeyPair -> PVSS.Point
-toPk (PVSS.KeyPair _ p) = p
-
 timing f = do
     t1 <- timeCurrentP
     a  <- f
@@ -36,13 +33,12 @@ go t n = do
 
     !commitments <- timingP "commitments" $ return $ PVSS.createCommitments e
 
-    -- !eshares <- timingP "shares" $ PVSS.sharesCreate e commitments (map toPk participants)
-    !esharesChunks <- timingP "shares" $ forM (chunk 200 $ zip [1..] (map toPk participants)) $ \c ->
+    !esharesChunks <- timingP "shares" $ forM (chunk 200 $ zip [1..] (map PVSS.toPublicKey participants)) $ \c ->
         timingP ("chunk-" ++ show (fst $ head c)) $ forM c $ uncurry (PVSS.shareCreate e commitments)
     let eshares = mconcat esharesChunks
 
 
-    validated <- timingP "validating" $ forM (chunk 200 $ zip eshares (map toPk participants)) $ \c ->
+    validated <- timingP "validating" $ forM (chunk 200 $ zip eshares (map PVSS.toPublicKey participants)) $ \c ->
         timingP ("vchunk") $ forM c $ return . PVSS.verifyEncryptedShare (PVSS.escrowExtraGen e) commitments
 
     !decryptedShares <- timingP "decrypting" $ mapM (\(kp,eshare) -> do
@@ -51,7 +47,7 @@ go t n = do
         ) (zip participants eshares)
 
     !verifiedShares <- timingP "verifying" $ return $
-        PVSS.getValidRecoveryShares t (zip3 eshares (map toPk participants) decryptedShares)
+        PVSS.getValidRecoveryShares t (zip3 eshares (map PVSS.toPublicKey participants) decryptedShares)
 
     recovered <- timingP "recovering" $ return $ PVSS.recover $ take (fromIntegral t+1) $ decryptedShares
     putStrLn $ show recovered
