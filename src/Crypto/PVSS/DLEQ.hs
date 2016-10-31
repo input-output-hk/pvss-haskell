@@ -28,7 +28,7 @@ instance NFData DLEQ
 newtype Challenge = Challenge ByteString
     deriving (Show,Eq,NFData)
 instance Binary Challenge where
-    put (Challenge c) = put c
+    put (Challenge c) = putByteString c
     get = Challenge <$> getByteString 32
 
 -- | The generated proof
