@@ -25,6 +25,7 @@ module Crypto.PVSS.ECC
     , (.-)
     , (.*)
     , (*.)
+    , mulPowerAndSum
     , hashPoints
     , hashPointsToKey
     ) where
@@ -102,7 +103,7 @@ instance Binary Point where
         . unPoint
     get = either fail (return . Point) . SSL.ecPointFromOct p256 =<< getByteString 33
 
-newtype Scalar = Scalar Integer
+newtype Scalar = Scalar { unScalar :: Integer }
     deriving (Show,Eq,Generic,NFData)
 instance Binary Scalar where
     put (Scalar i) = putByteString $ i2ospOf_ 32 i
@@ -181,6 +182,9 @@ curveGenerator = Point $ SSL.ecGroupGetGenerator p256
     Scalar $ expFast a n order
   where
     order = SSL.ecGroupGetOrder p256
+
+mulPowerAndSum :: [Point] -> Integer -> Point
+mulPowerAndSum l n = Point $ SSL.ecPointsMulOfPowerAndSum p256 (map unPoint l) n
 
 #else
 newtype Point = Point { unPoint :: P256.Point }

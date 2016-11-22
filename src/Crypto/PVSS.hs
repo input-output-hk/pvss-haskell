@@ -298,9 +298,11 @@ getValidRecoveryShares threshold shares =
     map thd . take (fromIntegral threshold) . filter verifyDecryptedShare $ shares
   where thd (_,_,ds) = ds
 
+-- | Sum all commitment multiplied by the share id raised at the power of i
+--
+-- C_0 * 1 + C_1 * shareid + C_2 * shareid^2 + C_3 * shareid^3 ... + C_n * shareid^n
 createXi :: ShareId      -- ^ index i
          -> [Commitment] -- ^ all commitments
          -> Point
 createXi i commitments =
-    let es  = [ (keyFromNum (fromIntegral i) #^ j) | j <- [0..] ]
-     in foldl' (.+) pointIdentity $ zipWith (.*) (map unCommitment commitments) es
+    mulPowerAndSum (map unCommitment commitments) (fromIntegral i)
