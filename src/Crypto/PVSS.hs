@@ -1,10 +1,14 @@
 -- Implementation of the Public Verifiable Secret Scheme based on Berry Schoenmakers's paper:
 --
 --	<http://www.win.tue.nl/~berry/papers/crypto99.pdf>
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
+{-# OPTIONS -Wno-unused-top-binds #-}
+{-# OPTIONS -Wno-name-shadowing   #-}
+{-# OPTIONS -Wno-unused-matches   #-}
+
 module Crypto.PVSS
     (
     -- * Simple alias
@@ -42,22 +46,21 @@ module Crypto.PVSS
     , keyPairGenerate
     ) where
 
-import           Control.Monad
 import           Control.DeepSeq
+import           Control.Monad
 
 import           GHC.Generics
 
-import           Data.ByteString (ByteString)
-import           Data.List (foldl')
 import           Data.Binary
-import           Data.Binary.Get (getWord32le)
-import           Data.Binary.Put (putWord32le)
+import           Data.Binary.Get        (getWord32le)
+import           Data.Binary.Put        (putWord32le)
+import           Data.List              (foldl')
 
-import           Crypto.Random
-import           Crypto.PVSS.Polynomial (Polynomial(..))
-import qualified Crypto.PVSS.Polynomial as Polynomial
-import qualified Crypto.PVSS.DLEQ as DLEQ
+import qualified Crypto.PVSS.DLEQ       as DLEQ
 import           Crypto.PVSS.ECC
+import           Crypto.PVSS.Polynomial (Polynomial (..))
+import qualified Crypto.PVSS.Polynomial as Polynomial
+import           Crypto.Random
 
 newtype Commitment = Commitment { unCommitment :: Point }
     deriving (Show,Eq,NFData,Binary)
@@ -143,7 +146,7 @@ escrowNew threshold = do
 -- | Prepare a secret into public encrypted shares for distributions using the PVSS scheme
 --
 -- returns:
---  * the encrypted secret which is locked symettrically to the DH-secret (g^random)
+--  * the encrypted secret which is locked symmetrically to the DH-secret (g^random)
 --  * the list of public commitments (Cj) to the scheme
 --  * The encrypted shares that should be distributed to each partipants.
 escrow :: MonadRandom randomly
@@ -169,7 +172,7 @@ escrowWith escrow pubs = do
     return (commitments, encryptedShares)
 
 -- | Create all the commitments
--- 
+--
 -- there is <threshold> commitments in the list
 createCommitments :: Escrow -> [Commitment]
 createCommitments escrow =
