@@ -1,5 +1,5 @@
 name:                pvss
-version:             0.1.0.0
+version:             0.0
 synopsis:            Public Verifiable Secret Sharing
 description:         Please see README.md
 homepage:            https://github.com/input-output-hk/pvss-haskell#readme
