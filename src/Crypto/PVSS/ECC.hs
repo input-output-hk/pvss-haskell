@@ -61,6 +61,10 @@ data KeyPair = KeyPair
     }
     deriving (Show,Eq,Generic)
 
+instance Binary KeyPair where
+    put (KeyPair priv pub) = put priv >> put pub
+    get = KeyPair <$> get <*> get
+
 instance NFData KeyPair
 
 newtype DhSecret = DhSecret ByteString
