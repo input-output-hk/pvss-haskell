@@ -44,13 +44,11 @@ import           GHC.Generics
 import           Control.DeepSeq
 import           Crypto.Hash (hash, SHA256, Digest)
 import           Crypto.Number.Serialize
-import           Crypto.Number.ModArithmetic (expSafe, expFast)
-import           Crypto.Error
+import           Crypto.Number.ModArithmetic (expFast)
 import           Crypto.Random
 
 #ifdef OPENSSL
 import qualified Crypto.OpenSSL.ECC as SSL
-import qualified Crypto.OpenSSL.BN as BN
 import GHC.Integer.GMP.Internals (recipModInteger)
 import Crypto.Number.Generate
 #else
@@ -69,9 +67,9 @@ newtype DhSecret = DhSecret ByteString
     deriving (Show,Eq,NFData,Binary)
 
 keyFromBytes :: ByteString -> Scalar
-keyFromBytes = keyFromNum . os2ip
-  where os2ip :: ByteString -> Integer
-        os2ip = B.foldl' (\a b -> (256 * a) .|. (fromIntegral b)) 0
+keyFromBytes = keyFromNum . os2ip'
+  where os2ip' :: ByteString -> Integer
+        os2ip' = B.foldl' (\a b -> (256 * a) .|. (fromIntegral b)) 0
 
 -- | Private Key
 newtype PrivateKey = PrivateKey Scalar
@@ -83,6 +81,7 @@ newtype PublicKey = PublicKey Point
 
 #ifdef OPENSSL
 
+p256 :: SSL.EcGroup
 p256 = maybe (error "p256 curve") id $ SSL.ecGroupFromCurveOID "1.2.840.10045.3.1.7"
 
 newtype Point = Point { unPoint :: SSL.EcPoint }

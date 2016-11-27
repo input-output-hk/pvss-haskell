@@ -1,6 +1,5 @@
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE BangPatterns #-}
 module Crypto.PVSS.DLEQ
     ( DLEQ(..)
     , Proof(..)
@@ -8,13 +7,13 @@ module Crypto.PVSS.DLEQ
     , verify
     ) where
 
-import GHC.Generics
-import Control.DeepSeq
-import Crypto.PVSS.ECC
-import Data.ByteString (ByteString)
+import           Control.DeepSeq
+import           Crypto.PVSS.ECC
 import           Data.Binary
 import           Data.Binary.Get (getByteString)
 import           Data.Binary.Put (putByteString)
+import           Data.ByteString (ByteString)
+import           GHC.Generics
 
 data DLEQ = DLEQ
     { dleq_g1 :: !Point -- ^ g1 parameter
@@ -33,8 +32,8 @@ instance Binary Challenge where
 
 -- | The generated proof
 data Proof = Proof
-    { proof_c  :: !Challenge
-    , proof_z  :: !Scalar
+    { proof_c :: !Challenge
+    , proof_z :: !Scalar
     } deriving (Show,Eq,Generic)
 
 instance Binary Proof
@@ -45,7 +44,7 @@ generate :: Scalar -- ^ random value
          -> Scalar -- ^ a
          -> DLEQ   -- ^ DLEQ parameters to generate from
          -> Proof
-generate w a pp@(DLEQ g1 h1 g2 h2) = Proof (Challenge c) r
+generate w a (DLEQ g1 h1 g2 h2) = Proof (Challenge c) r
   where
     a1     = g1 .* w
     a2     = g2 .* w
