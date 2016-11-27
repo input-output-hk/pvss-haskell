@@ -55,4 +55,4 @@ test-suite pvss-test
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/pvss
+  location: https://github.com/input-output-hk/pvss-haskell
