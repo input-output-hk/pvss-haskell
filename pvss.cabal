@@ -10,7 +10,7 @@ maintainer:          vincent.hanquez@iohk.io
 copyright:           2016 IOHK
 category:            Crypto
 build-type:          Simple
--- extra-source-files:
+extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
