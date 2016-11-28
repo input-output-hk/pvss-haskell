@@ -3,7 +3,7 @@ Version:             0.1
 synopsis:            Public Verifiable Secret Sharing
 description:         Please see README.md
 homepage:            https://github.com/input-output-hk/pvss-haskell#readme
-license:             BSD3
+license:             MIT
 license-file:        LICENSE
 author:              Vincent Hanquez
 maintainer:          vincent.hanquez@iohk.io
