@@ -39,25 +39,31 @@ timingPureP n f = do
     putStrLn (n ++ ": " ++ showTimeDiff (t2 `timeDiffP` t1))
     return a
 
+chunk :: Int -> [t] -> [[t]]
 chunk _ [] = []
 chunk n l =
     let (l1,l2) = splitAt n l
      in l1 : chunk n l2
 
+go :: PVSS.Threshold -> Int -> IO ()
 go t n = do
     participants <- replicateM n $ PVSS.keyPairGenerate
 
-    !e <- timingP "escrow-new" $ PVSS.escrowNew t
+    (e, commitments, eshares) <-
+        timingP "escrow" $ do
+            !xe <- timingP "escrow-new" $ PVSS.escrowNew t
 
-    !commitments <- timingP "commitments" $ return $ PVSS.createCommitments e
+            !xcommitments <- timingP "commitments" $ return $ PVSS.createCommitments xe
 
-    !esharesChunks <- timingP "shares" $ forM (chunk 200 $ zip [1..] (map PVSS.toPublicKey participants)) $ \c ->
-        timingP ("chunk-" ++ show (fst $ head c)) $ forM c $ uncurry (PVSS.shareCreate e commitments)
-    let eshares = mconcat esharesChunks
+            !xesharesChunks <- timingP "shares" $ forM (chunk 200 $ zip [1..] (map PVSS.toPublicKey participants)) $ \c ->
+                timingP ("  chunk-" ++ show (fst $ head c)) $ forM c $ uncurry (PVSS.shareCreate xe xcommitments)
+            let eshares = mconcat xesharesChunks
+            return (xe, xcommitments, eshares)
 
 
-    validated <- timingP "validating" $ forM (chunk 200 $ zip eshares (map PVSS.toPublicKey participants)) $ \c ->
-        timingP ("vchunk") $ forM c $ return . PVSS.verifyEncryptedShare (PVSS.escrowExtraGen e) commitments
+    !validated <- timingP "validating" $ forM (chunk 200 $ zip eshares (map PVSS.toPublicKey participants)) $ \c ->
+        timingP ("  vchunk") $ forM c $ return . PVSS.verifyEncryptedShare (PVSS.escrowExtraGen e) commitments
+    putStrLn (show $ and $ concat validated)
 
     !decryptedShares <- timingP "decrypting" $ mapM (\(kp,eshare) -> do
             p <- PVSS.shareDecrypt kp eshare
@@ -66,6 +72,7 @@ go t n = do
 
     !verifiedShares <- timingP "verifying" $ return $
         PVSS.getValidRecoveryShares t (zip3 eshares (map PVSS.toPublicKey participants) decryptedShares)
+    putStrLn (show $ t == fromIntegral (length verifiedShares))
 
     recovered <- timingP "recovering" $ return $ PVSS.recover $ take (fromIntegral t+1) $ decryptedShares
     putStrLn $ show recovered
