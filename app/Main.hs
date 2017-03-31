@@ -5,7 +5,6 @@ import           System.Environment
 import           Control.Monad
 import           Control.Exception
 import           Control.DeepSeq
-import           Crypto.Random
 import qualified Crypto.PVSS as PVSS
 import           Time.Types
 import           Time.System
