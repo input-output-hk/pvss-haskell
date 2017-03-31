@@ -6,6 +6,7 @@ import           Control.Monad
 import           Control.Exception
 import           Control.DeepSeq
 import qualified Crypto.PVSS as PVSS
+import qualified Crypto.SCRAPE as SCRAPE
 import           Time.Types
 import           Time.System
 import           Data.Hourglass (timeDiffP)
@@ -76,9 +77,35 @@ go t n = do
     recovered <- timingP "recovering" $ return $ PVSS.recover $ take (fromIntegral t+1) $ decryptedShares
     putStrLn $ show recovered
 
+goScrape :: SCRAPE.Threshold -> Int -> IO ()
+goScrape t n = do
+    keypairParticipants <- timingP "keypair" (replicateM n $ PVSS.keyPairGenerate)
+    () <- deepseq keypairParticipants (return ())
+    let participantsPublicKeys = map PVSS.toPublicKey keypairParticipants
+        participants           =  SCRAPE.Participants participantsPublicKeys
+
+    (extraGen, sec, esis, commitments, parallelProofs) <- timingP "escrow" $ SCRAPE.escrow t participants
+
+    !validated <- timingP "validating" $ SCRAPE.verifyEncryptedShares extraGen t commitments parallelProofs esis participants
+    putStrLn ("encrypted validated: " ++ show validated)
+
+    !decryptedShares <- timingP "decrypting" $ mapM (\(kp,eshare) -> do
+            p <- SCRAPE.shareDecrypt kp eshare
+            return $! p
+        ) (zip keypairParticipants esis)
+
+    !v <- timingPureP "verifying-decrypted" $
+        and $ map (SCRAPE.verifyDecryptedShare) $ zip3 esis participantsPublicKeys decryptedShares
+    putStrLn $ show v
+
+    recovered <- timingPureP "recovering" $ SCRAPE.recover $ zip [1..] $ take (fromIntegral t) $ decryptedShares
+    putStrLn $ "secret   : " ++ show sec
+    putStrLn $ "recovered: " ++ show recovered
+
 main :: IO ()
 main = do
     args <- getArgs
     case args of
-        [tS, nS] -> go (read tS) (read nS)
-        _        -> error "error: pvss <threshold> <number>"
+        ["scrape", tS, nS] -> goScrape (read tS) (read nS)
+        [tS, nS]           -> go (read tS) (read nS)
+        _                  -> error "error: pvss [scrape] <threshold> <number>"

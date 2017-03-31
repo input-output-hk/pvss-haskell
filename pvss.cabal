@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Crypto.PVSS
+                       Crypto.SCRAPE
   other-modules:       Crypto.PVSS.ECC
                        Crypto.PVSS.DLEQ
                        Crypto.PVSS.Polynomial
@@ -28,6 +29,7 @@ library
                      , cryptonite-openssl >= 0.3
                      , integer-gmp
   default-language:    Haskell2010
+  ghc-options:         -Wall
 
 executable pvss-exe
   hs-source-dirs:      app
