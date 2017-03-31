@@ -3,22 +3,40 @@ module Main where
 
 import           System.Environment
 import           Control.Monad
+import           Control.Exception
 import           Control.DeepSeq
 import           Crypto.Random
 import qualified Crypto.PVSS as PVSS
-import           Data.Hourglass
 import           Time.Types
 import           Time.System
+import           Data.Hourglass (timeDiffP)
+import           Text.Printf (printf)
 
+showTimeDiff :: (Seconds, NanoSeconds) -> String
+showTimeDiff (Seconds s, NanoSeconds n) =
+    if s > 10
+        then printf "%d.%03d seconds" s (n `div` 1000000)
+        else printf "%d.%06d seconds" s (n `div` 1000)
+
+timing :: NFData t => IO t -> IO (t, (Seconds, NanoSeconds))
 timing f = do
     t1 <- timeCurrentP
     a  <- f
     t2 <- a `deepseq` timeCurrentP
     return (a, t2 `timeDiffP` t1)
 
+timingP :: NFData b => String -> IO b -> IO b
 timingP n f = do
-    (a, t) <- timing f
-    putStrLn (n ++ ": " ++ show t)
+    (!a, t) <- timing f
+    putStrLn (n ++ ": " ++ showTimeDiff t)
+    return a
+
+timingPureP :: NFData b => String -> b -> IO b
+timingPureP n f = do
+    t1 <- timeCurrentP
+    !a <- evaluate f
+    t2 <- a `deepseq` timeCurrentP
+    putStrLn (n ++ ": " ++ showTimeDiff (t2 `timeDiffP` t1))
     return a
 
 chunk _ [] = []
