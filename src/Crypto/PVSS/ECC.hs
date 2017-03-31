@@ -25,6 +25,7 @@ module Crypto.PVSS.ECC
     , (.-)
     , (.*)
     , (*.)
+    , mulAndSum
     , mulPowerAndSum
     , hashPoints
     , hashPointsToKey
@@ -185,6 +186,9 @@ curveGenerator = Point $ SSL.ecGroupGetGenerator p256
     Scalar $ expFast a n order
   where
     order = SSL.ecGroupGetOrder p256
+
+mulAndSum :: [(Point,Scalar)] -> Point
+mulAndSum l = Point $ SSL.ecPointsMulAndSum p256 (map (\(Point p, Scalar s) -> (p, s)) l)
 
 mulPowerAndSum :: [Point] -> Integer -> Point
 mulPowerAndSum l n = Point $ SSL.ecPointsMulOfPowerAndSum p256 (map unPoint l) n
