@@ -51,18 +51,18 @@ go t n = do
 
     (e, commitments, eshares) <-
         timingP "escrow" $ do
-            !xe <- timingP "escrow-new" $ PVSS.escrowNew t
+            !xe <- {-timingP "escrow-new" $-} PVSS.escrowNew t
 
-            !xcommitments <- timingP "commitments" $ return $ PVSS.createCommitments xe
+            !xcommitments <- {-timingP "commitments" $-} return $ PVSS.createCommitments xe
 
-            !xesharesChunks <- timingP "shares" $ forM (chunk 200 $ zip [1..] (map PVSS.toPublicKey participants)) $ \c ->
-                timingP ("  chunk-" ++ show (fst $ head c)) $ forM c $ uncurry (PVSS.shareCreate xe xcommitments)
+            !xesharesChunks <- {-timingP "shares" $-} forM (chunk 200 $ zip [1..] (map PVSS.toPublicKey participants)) $ \c ->
+                {-timingP ("  chunk-" ++ show (fst $ head c)) $ -}forM c $ uncurry (PVSS.shareCreate xe xcommitments)
             let eshares = mconcat xesharesChunks
             return (xe, xcommitments, eshares)
 
 
     !validated <- timingP "validating" $ forM (chunk 200 $ zip eshares (map PVSS.toPublicKey participants)) $ \c ->
-        timingP ("  vchunk") $ forM c $ return . PVSS.verifyEncryptedShare (PVSS.escrowExtraGen e) commitments
+        {-timingP ("  vchunk") $ -} forM c $ return . PVSS.verifyEncryptedShare (PVSS.escrowExtraGen e) commitments
     putStrLn (show $ and $ concat validated)
 
     !decryptedShares <- timingP "decrypting" $ mapM (\(kp,eshare) -> do
@@ -70,16 +70,17 @@ go t n = do
             return $! p
         ) (zip participants eshares)
 
-    !verifiedShares <- timingP "verifying" $ return $
+    !verifiedShares <- timingPureP "verifying" $
         PVSS.getValidRecoveryShares t (zip3 eshares (map PVSS.toPublicKey participants) decryptedShares)
     putStrLn (show $ t == fromIntegral (length verifiedShares))
 
-    recovered <- timingP "recovering" $ return $ PVSS.recover $ take (fromIntegral t+1) $ decryptedShares
+    recovered <- timingPureP "recovering" $ PVSS.recover $ take (fromIntegral t+1) $ decryptedShares
+    putStrLn $ show $ PVSS.escrowSecret e
     putStrLn $ show recovered
 
 goScrape :: SCRAPE.Threshold -> Int -> IO ()
 goScrape t n = do
-    keypairParticipants <- timingP "keypair" (replicateM n $ PVSS.keyPairGenerate)
+    keypairParticipants <- {-timingP "keypair"-} (replicateM n $ PVSS.keyPairGenerate)
     () <- deepseq keypairParticipants (return ())
     let participantsPublicKeys = map PVSS.toPublicKey keypairParticipants
         participants           =  SCRAPE.Participants participantsPublicKeys
@@ -87,7 +88,7 @@ goScrape t n = do
     (extraGen, sec, esis, commitments, parallelProofs) <- timingP "escrow" $ SCRAPE.escrow t participants
 
     !validated <- timingP "validating" $ SCRAPE.verifyEncryptedShares extraGen t commitments parallelProofs esis participants
-    putStrLn ("encrypted validated: " ++ show validated)
+    --putStrLn ("encrypted validated: " ++ show validated)
 
     !decryptedShares <- timingP "decrypting" $ mapM (\(kp,eshare) -> do
             p <- SCRAPE.shareDecrypt kp eshare
