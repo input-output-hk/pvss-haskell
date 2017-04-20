@@ -62,6 +62,10 @@ import           Crypto.PVSS.Polynomial (Polynomial (..))
 import qualified Crypto.PVSS.Polynomial as Polynomial
 import           Crypto.Random
 
+import           Foundation (fromList, (<>))
+import           Foundation.Array
+import           Foundation.Collection ((!))
+
 newtype Commitment = Commitment { unCommitment :: Point }
     deriving (Show,Eq,NFData,Binary)
 
@@ -277,6 +281,8 @@ recover shares =
     Secret $ foldl' interpolate pointIdentity (zip shares [0..])
   where
     t = fromIntegral $ length shares
+    aShares = fromList shares
+
 
     interpolate :: Point -> (DecryptedShare, ShareId) -> Point
     interpolate !result (share, sid) = result .+ (shareDecryptedVal share .* value)
@@ -287,11 +293,15 @@ recover shares =
             | j == t       = acc
             | j == sid     = calc (j+1) acc
             | otherwise    =
-                let sj   = decryptedShareID (shares !! fromIntegral j)
-                    si   = decryptedShareID (shares !! fromIntegral sid)
+                let sj   = decryptedShareID (aShares `unsafeIndex` fromIntegral j)
+                    si   = decryptedShareID (aShares `unsafeIndex` fromIntegral sid)
                     dinv = keyInverse (keyFromNum sj #- keyFromNum si)
                     e    = keyFromNum sj #* dinv
                  in calc (j+1) (acc #* e)
+
+    unsafeIndex :: Array a -> Int -> a
+    unsafeIndex v i = maybe (error $ "accessing index : " <> show i <> " out of bound") id $ (v ! i)
+
 
 -- | Get #Threshold decrypted share that are deemed valid
 getValidRecoveryShares :: Threshold
