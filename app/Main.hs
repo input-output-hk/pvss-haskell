@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 module Main where
 
 import           System.Environment
@@ -7,10 +8,16 @@ import           Control.Exception
 import           Control.DeepSeq
 import qualified Crypto.PVSS as PVSS
 import qualified Crypto.SCRAPE as SCRAPE
+import           Data.List
 import           Time.Types
 import           Time.System
 import           Data.Hourglass (timeDiffP)
 import           Text.Printf (printf)
+
+#ifdef VERSION_mcl
+import qualified Crypto.SCRAPE.BDS as SCRAPE_BDS
+import qualified Data.Vector as V
+#endif
 
 showTimeDiff :: (Seconds, NanoSeconds) -> String
 showTimeDiff (Seconds s, NanoSeconds n) =
@@ -78,8 +85,8 @@ go t n = do
     putStrLn $ show $ PVSS.escrowSecret e
     putStrLn $ show recovered
 
-goScrape :: SCRAPE.Threshold -> Int -> IO ()
-goScrape t n = do
+goScrapeDDH :: SCRAPE.Threshold -> Int -> IO ()
+goScrapeDDH t n = do
     keypairParticipants <- {-timingP "keypair"-} (replicateM n $ PVSS.keyPairGenerate)
     () <- deepseq keypairParticipants (return ())
     let participantsPublicKeys = map PVSS.toPublicKey keypairParticipants
@@ -87,7 +94,7 @@ goScrape t n = do
 
     (extraGen, sec, esis, commitments, parallelProofs) <- timingP "escrow" $ SCRAPE.escrow t participants
 
-    !validated <- timingP "validating" $ SCRAPE.verifyEncryptedShares extraGen t commitments parallelProofs esis participants
+    !_validated <- timingP "validating" $ SCRAPE.verifyEncryptedShares extraGen t commitments parallelProofs esis participants
     --putStrLn ("encrypted validated: " ++ show validated)
 
     !decryptedShares <- timingP "decrypting" $ mapM (\(kp,eshare) -> do
@@ -103,10 +110,43 @@ goScrape t n = do
     putStrLn $ "secret   : " ++ show sec
     putStrLn $ "recovered: " ++ show recovered
 
+#ifdef VERSION_mcl
+goScrapeBDS :: Int -> Int -> IO ()
+goScrapeBDS t n = do
+  (dp, parties) <- timingP "setup" $ SCRAPE_BDS.setup n
+
+  (secret, encryptedShares, commitments) <- timingP "distribution" $
+    SCRAPE_BDS.distribution dp parties t
+
+  timingP "verification" $
+    SCRAPE_BDS.verification dp t parties encryptedShares commitments
+
+  recoveredSecret <- timingP "reconstruction" $
+    SCRAPE_BDS.reconstruction dp (V.take t parties)
+                                 (V.take t encryptedShares)
+                                 (V.take t commitments)
+
+  unless (secret == recoveredSecret) $ do
+    fail $ "secret and recoveredSecret do not match: secret = "
+      ++ show secret ++ ", recoveredSecret = " ++ show recoveredSecret
+
+  putStrLn $ "secret: " ++ show recoveredSecret
+#endif
+
 main :: IO ()
 main = do
     args <- getArgs
     case args of
-        ["scrape", tS, nS] -> goScrape (read tS) (read nS)
+#ifdef VERSION_mcl
+        ["scrape-bds", tS, nS] -> goScrapeBDS (read tS) (read nS)
+#endif
+        ["scrape-ddh", tS, nS] -> goScrapeDDH (read tS) (read nS)
         [tS, nS]           -> go (read tS) (read nS)
-        _                  -> error "error: pvss [scrape] <threshold> <number>"
+        _                  -> error $ "error: pvss [" ++ scrapeVersions ++ "] <threshold> <number>"
+  where
+    scrapeVersions = intercalate "|"
+      [ "scrape-ddh"
+#ifdef VERSION_mcl
+      , "scrape-bds"
+#endif
+      ]

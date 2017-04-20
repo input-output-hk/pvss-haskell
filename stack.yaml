@@ -37,6 +37,11 @@ resolver: lts-8.11
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - '.'
+- location:
+    git: https://github.com/arybczak/haskell-mcl.git
+    commit: e08b4103748d3334f45b6882f079161925dd49f8
+  extra-dep: true
+
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: []
