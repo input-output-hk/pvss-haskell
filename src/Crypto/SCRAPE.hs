@@ -53,6 +53,10 @@ import           Crypto.PVSS.Polynomial (Polynomial (..))
 import qualified Crypto.PVSS.Polynomial as Polynomial
 import           Crypto.Random
 
+import           Foundation (fromList, (<>))
+import           Foundation.Array
+import           Foundation.Collection ((!))
+
 newtype Commitment = Commitment { unCommitment :: Point }
     deriving (Show,Eq,NFData,Binary)
 
@@ -274,6 +278,7 @@ recover :: [(ShareId, DecryptedShare)] -- the list of participant decrypted shar
 recover shares = Secret $ foldl' interpolate pointIdentity (zip shares [0..])
   where
     t = fromIntegral $ length shares
+    aShares = fromList shares
 
     interpolate :: Point -> ((Integer, DecryptedShare), ShareId) -> Point
     interpolate !result (share, sid) = result .+ (shareDecryptedVal (snd share) .* value)
@@ -284,8 +289,11 @@ recover shares = Secret $ foldl' interpolate pointIdentity (zip shares [0..])
             | j == t       = acc
             | j == sid     = calc (j+1) acc
             | otherwise    =
-                let sj   = fst (shares !! fromIntegral j)
-                    si   = fst (shares !! fromIntegral sid)
+                let sj   = fst (aShares `unsafeIndex` fromIntegral j)
+                    si   = fst (aShares `unsafeIndex` fromIntegral sid)
                     dinv = keyInverse (keyFromNum sj #- keyFromNum si)
                     e    = keyFromNum sj #* dinv
                  in calc (j+1) (acc #* e)
+
+    unsafeIndex :: Array a -> Int -> a
+    unsafeIndex v i = maybe (error $ "accessing index : " <> show i <> " out of bound") id $ (v ! i)
