@@ -5,6 +5,7 @@ packages:
     git: https://github.com/arybczak/haskell-mcl.git
     commit: e08b4103748d3334f45b6882f079161925dd49f8
   extra-dep: true
-extra-deps: []
+extra-deps:
+- foundation-0.0.7
 flags: {}
 extra-package-dbs: []

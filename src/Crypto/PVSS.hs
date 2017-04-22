@@ -62,7 +62,7 @@ import           Crypto.PVSS.Polynomial (Polynomial (..))
 import qualified Crypto.PVSS.Polynomial as Polynomial
 import           Crypto.Random
 
-import           Foundation (fromList, (<>))
+import           Foundation (fromList, (<>), Offset(..))
 import           Foundation.Array
 import           Foundation.Collection ((!))
 
@@ -300,7 +300,7 @@ recover shares =
                  in calc (j+1) (acc #* e)
 
     unsafeIndex :: Array a -> Int -> a
-    unsafeIndex v i = maybe (error $ "accessing index : " <> show i <> " out of bound") id $ (v ! i)
+    unsafeIndex v i = maybe (error $ "accessing index : " <> show i <> " out of bound") id $ (v ! Offset i)
 
 
 -- | Get #Threshold decrypted share that are deemed valid
