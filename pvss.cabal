@@ -41,6 +41,8 @@ library
      exposed-modules:  Crypto.SCRAPE.BDS
      build-depends:    mcl,
                        vector
+  if impl(ghc < 8.0)
+     Buildable:        False
 
 executable pvss-exe
   hs-source-dirs:      app
