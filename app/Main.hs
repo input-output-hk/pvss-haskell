@@ -122,9 +122,7 @@ goScrapeBDS t n = do
     SCRAPE_BDS.verification dp t parties encryptedShares commitments
 
   recoveredSecret <- timingP "reconstruction" $
-    SCRAPE_BDS.reconstruction dp (V.take t parties)
-                                 (V.take t encryptedShares)
-                                 (V.take t commitments)
+    SCRAPE_BDS.reconstruction dp (V.take t) parties encryptedShares commitments
 
   unless (secret == recoveredSecret) $ do
     fail $ "secret and recoveredSecret do not match: secret = "

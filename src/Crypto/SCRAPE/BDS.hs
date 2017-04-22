@@ -3,6 +3,7 @@
 --	<http://eprint.iacr.org/2017/216>
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 module Crypto.SCRAPE.BDS
   ( DP(..)
@@ -164,27 +165,36 @@ verification DP{..} t parties encryptedShares commitments = do
 reconstruction
   :: MonadRandom m
   => DP
+  -> (forall t. V.Vector t -> V.Vector t)
   -> V.Vector Party
   -> V.Vector G1
   -> V.Vector G2
   -> m GT
-reconstruction DP{..} parties encryptedShares commitments = do
+reconstruction DP{..} select allParties allEncryptedShares allCommitments = do
   let shares = V.imap (\i -> decryptShare (privKey $ parties V.! i)) encryptedShares
       sharesCheck = (`V.imap` shares) $ \i share ->
         pairing share g2 == pairing g1 (commitments V.! i)
 
   verifyCheck "reconstruction" sharesCheck
 
-  let result = F.fold $ V.imap (\i share -> share `g1_powFr` coeff (i + 1)) shares
+  let result = F.fold $ V.imap (\i share -> share `g1_powFr` coeff i) shares
   return $ pairing result g2'
   where
-    t = V.length parties
+    ids             = select $ V.enumFromTo 1 (V.length allParties)
+    parties         = select allParties
+    encryptedShares = select allEncryptedShares
+    commitments     = select allCommitments
 
     coeff :: Int -> Fr
-    coeff i = go t 1
+    coeff i = go 0 1
       where
+        t = V.length ids
+
         go :: Int -> Fr -> Fr
         go j !acc
-          | j == 0    = acc
-          | j == i    = go (j - 1) $ acc
-          | otherwise = go (j - 1) $ acc * fromIntegral j / fromIntegral (j - i)
+          | j == t    = acc
+          | j == i    = go (j + 1) $ acc
+          | otherwise =
+            let id_i = ids V.! i
+                id_j = ids V.! j
+            in go (j + 1) $ acc * fromIntegral id_j / fromIntegral (id_j - id_i)
