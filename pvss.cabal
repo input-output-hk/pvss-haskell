@@ -13,6 +13,11 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 
+Flag scrape-bds
+  Description: Build BDS version of PVSS-SCRAPE protocol
+  Manual: True
+  Default: False
+
 library
   hs-source-dirs:      src
   exposed-modules:     Crypto.PVSS
@@ -27,10 +32,15 @@ library
                      , bytestring
                      , cryptonite
                      , cryptonite-openssl >= 0.3
-                     , foundation
+                     , foundation < 0.0.7
                      , integer-gmp
   default-language:    Haskell2010
   ghc-options:         -Wall
+
+  if flag(scrape-bds)
+     exposed-modules:  Crypto.SCRAPE.BDS
+     build-depends:    mcl,
+                       vector
 
 executable pvss-exe
   hs-source-dirs:      app
@@ -42,6 +52,7 @@ executable pvss-exe
                      , hourglass
                      , cryptonite
                      , pvss
+                     , vector
   default-language:    Haskell2010
 
 test-suite pvss-test
