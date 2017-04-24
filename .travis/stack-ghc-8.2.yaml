@@ -1,6 +1,6 @@
 compiler: ghc-8.2.0.20170404
 compiler-check: match-exact
-resolver: lts-8.11
+resolver: lts-8.12
 allow-newer: true
 setup-info:
   ghc:
