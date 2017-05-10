@@ -114,9 +114,9 @@ setup n = do
     return Party{..}
   return (DP{..}, parties)
   where
-    g1  = mapToG1 (error "g1")  1
-    g2  = mapToG2 (error "g2")  2
-    g2' = mapToG2 (error "g2'") 3
+    g1  = mapToG1 1
+    g2  = mapToG2 2
+    g2' = mapToG2 3
 
 distribution
   :: MonadRandom m
