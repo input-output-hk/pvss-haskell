@@ -23,6 +23,7 @@ module Crypto.SCRAPE
     -- * Types
     , Escrow(..)
     , Commitment
+    , EncryptedSi
     , DecryptedShare(..)
     -- * method
     , escrow
