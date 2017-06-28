@@ -191,7 +191,7 @@ escrowWith escrowParams (Participants pubs) = do
 
 -- | Decrypt an Encrypted share using the party's key pair.
 -- Doesn't verify if an encrypted share is valid, for this
--- you need to use 'verifyEncryptedShare'
+-- you need to have use 'verifyEncryptedShares'
 --
 -- 1) compute Si = Yi ^ (1/xi) = G^(p(i))
 -- 2) create a proof of the valid decryption
