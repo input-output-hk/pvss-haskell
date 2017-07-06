@@ -14,7 +14,7 @@ module Crypto.SCRAPE
     , Point
     , DLEQ.Proof
     , Scalar
-    , Secret
+    , Secret(..)
     , Participants(..)
     , PublicKey(..)
     , PrivateKey(..)
@@ -22,8 +22,8 @@ module Crypto.SCRAPE
     , DhSecret(..)
     -- * Types
     , Escrow(..)
-    , Commitment
-    , EncryptedSi
+    , Commitment(..)
+    , EncryptedSi(..)
     , DecryptedShare(..)
     -- * method
     , escrow
