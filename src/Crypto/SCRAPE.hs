@@ -279,7 +279,7 @@ reorderDecryptShares (Participants participants) shares =
 -- | Recover the DhSecret used
 --
 -- Need to pass the correct amount of shares (threshold),
--- preferably from a 'getValidRecoveryShares' call
+-- preferably from a 'reorderDecryptShares' call
 recover :: [(ShareId, DecryptedShare)] -- the list of participant decrypted share identified by a public key
         -> Secret
 recover shares = Secret $ foldl' interpolate pointIdentity (zip shares [0..])
