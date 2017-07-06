@@ -13,6 +13,7 @@ module Crypto.SCRAPE
     , ExtraGen
     , Point
     , DLEQ.Proof
+    , DLEQ.ParallelProofs
     , Scalar
     , Secret
     , Participants(..)
@@ -153,11 +154,16 @@ escrowNew threshold = do
 escrow :: MonadRandom randomly
        => Threshold    -- ^ PVSS scheme configuration n/t threshold
        -> Participants -- ^ Participants public keys
-       -> randomly (ExtraGen, Secret, [EncryptedSi], [Commitment], DLEQ.ParallelProofs)
+       -> randomly (ExtraGen,
+                    Secret,
+                    [EncryptedSi],
+                    [Commitment],
+                    DLEQ.Proof,
+                    DLEQ.ParallelProofs)
 escrow t pubs = do
     e <- escrowNew t
     (eshares, commitments, proofs) <- escrowWith e pubs
-    return (escrowExtraGen e, escrowSecret e, eshares, commitments, proofs)
+    return (escrowExtraGen e, escrowSecret e, eshares, commitments, escrowProof e, proofs)
 
 -- | Escrow with a given polynomial
 escrowWith :: MonadRandom randomly
