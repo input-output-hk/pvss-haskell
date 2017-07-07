@@ -10,12 +10,12 @@ module Crypto.SCRAPE
     -- * Simple alias
       Threshold
     , ShareId
-    , ExtraGen
+    , ExtraGen(..)
     , Point
     , DLEQ.Proof
     , DLEQ.ParallelProofs
     , Scalar
-    , Secret
+    , Secret(..)
     , Participants(..)
     , PublicKey(..)
     , PrivateKey(..)
@@ -23,8 +23,8 @@ module Crypto.SCRAPE
     , DhSecret(..)
     -- * Types
     , Escrow(..)
-    , Commitment
-    , EncryptedSi
+    , Commitment(..)
+    , EncryptedSi(..)
     , DecryptedShare(..)
     -- * method
     , escrow
