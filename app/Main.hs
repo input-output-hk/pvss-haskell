@@ -92,7 +92,7 @@ goScrapeDDH t n = do
     let participantsPublicKeys = map PVSS.toPublicKey keypairParticipants
         participants           =  SCRAPE.Participants participantsPublicKeys
 
-    (extraGen, sec, esis, commitments, parallelProofs) <- timingP "escrow" $ SCRAPE.escrow t participants
+    (extraGen, sec, esis, commitments, _proof, parallelProofs) <- timingP "escrow" $ SCRAPE.escrow t participants
 
     !_validated <- timingP "validating" $ SCRAPE.verifyEncryptedShares extraGen t commitments parallelProofs esis participants
     --putStrLn ("encrypted validated: " ++ show validated)

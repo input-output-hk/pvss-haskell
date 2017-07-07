@@ -13,6 +13,7 @@ module Crypto.SCRAPE
     , ExtraGen
     , Point
     , DLEQ.Proof
+    , DLEQ.ParallelProofs
     , Scalar
     , Secret
     , Participants(..)
@@ -153,11 +154,16 @@ escrowNew threshold = do
 escrow :: MonadRandom randomly
        => Threshold    -- ^ PVSS scheme configuration n/t threshold
        -> Participants -- ^ Participants public keys
-       -> randomly (ExtraGen, Secret, [EncryptedSi], [Commitment], DLEQ.ParallelProofs)
+       -> randomly (ExtraGen,
+                    Secret,
+                    [EncryptedSi],
+                    [Commitment],
+                    DLEQ.Proof,
+                    DLEQ.ParallelProofs)
 escrow t pubs = do
     e <- escrowNew t
     (eshares, commitments, proofs) <- escrowWith e pubs
-    return (escrowExtraGen e, escrowSecret e, eshares, commitments, proofs)
+    return (escrowExtraGen e, escrowSecret e, eshares, commitments, escrowProof e, proofs)
 
 -- | Escrow with a given polynomial
 escrowWith :: MonadRandom randomly
@@ -273,7 +279,7 @@ reorderDecryptShares (Participants participants) shares =
 -- | Recover the DhSecret used
 --
 -- Need to pass the correct amount of shares (threshold),
--- preferably from a 'getValidRecoveryShares' call
+-- preferably from a 'reorderDecryptShares' call
 recover :: [(ShareId, DecryptedShare)] -- the list of participant decrypted share identified by a public key
         -> Secret
 recover shares = Secret $ foldl' interpolate pointIdentity (zip shares [0..])
