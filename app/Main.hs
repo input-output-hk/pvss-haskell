@@ -140,12 +140,13 @@ main = do
         ["scrape-bds", tS, nS] -> goScrapeBDS (read tS) (read nS)
 #endif
         ["scrape-ddh", tS, nS] -> goScrapeDDH (read tS) (read nS)
-        [tS, nS]           -> go (read tS) (read nS)
-        _                  -> error $ "error: pvss [" ++ scrapeVersions ++ "] <threshold> <number>"
+        ["pvss", tS, nS]       -> go (read tS) (read nS)
+        _                      -> error $ "error: pvss [" ++ scrapeVersions ++ "] <threshold> <number>"
   where
     scrapeVersions = intercalate "|"
       [ "scrape-ddh"
 #ifdef VERSION_mcl
       , "scrape-bds"
 #endif
+      , "pvss"
       ]
