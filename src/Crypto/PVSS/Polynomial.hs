@@ -17,6 +17,9 @@ import Data.List
 newtype Polynomial = Polynomial [Scalar]
     deriving (Show,Eq,NFData)
 
+-- | Generate a polynomial of degree i-1
+--
+-- a0 + a1 * x + a2 * x^2 + ai-1 * x^i-1
 generate :: MonadRandom randomly => Int -> randomly Polynomial
 generate i
     | i <= 0    = error ("invalid polynomial degree: " ++ show i)
