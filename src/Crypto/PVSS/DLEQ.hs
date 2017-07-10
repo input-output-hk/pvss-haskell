@@ -89,7 +89,7 @@ generateParallel l =
     let as = map (\(r, _, (DLEQ g1 _ g2 _)) -> (g1 .* r, g2 .* r)) l
         h  =  concatMap (\(_, _, (DLEQ _ v1 _ v2)) -> [v1,v2]) l
            ++ concatMap (\(a1, a2) -> [a1,a2]) as
-        -- all v1,a2 followed by all (a1,a2)
+        -- all v1,v2 followed by all (a1,a2)
         challenge = hashPoints h
         c = keyFromBytes challenge
 
