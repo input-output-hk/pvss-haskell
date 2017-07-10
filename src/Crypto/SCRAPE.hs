@@ -129,7 +129,7 @@ escrowNew :: MonadRandom randomly
           => Threshold
           -> randomly Escrow
 escrowNew threshold = do
-    poly <- Polynomial.generate (fromIntegral (threshold - 1))
+    poly <- Polynomial.generate (fromIntegral threshold)
     gen  <- pointFromSecret <$> keyGenerate
 
     let secret = Polynomial.atZero poly
@@ -163,7 +163,7 @@ escrow :: MonadRandom randomly
                     DLEQ.Proof,
                     DLEQ.ParallelProofs)
 escrow t pubs@(Participants nlist)
-    | n < 3                = error "cannot create SCRAPE with less than 3 participants"
+    | n < 2                = error "cannot create SCRAPE with less than 3 participants"
     | t+2 > fromIntegral n = error ("cannot create SCRAPE with threshold=" ++ show t ++ " participants=" ++ show n ++ ". valid values of t are: t + 2 <= n")
     | otherwise            = do
         e <- escrowNew t
