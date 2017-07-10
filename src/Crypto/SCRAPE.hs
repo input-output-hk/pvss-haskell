@@ -135,7 +135,9 @@ escrowNew threshold = do
     let secret = Polynomial.atZero poly
         gS     = pointFromSecret secret
     challenge <- keyGenerate
-    let dleq  = DLEQ.DLEQ { DLEQ.dleq_g1 = curveGenerator, DLEQ.dleq_h1 = gS, DLEQ.dleq_g2 = gen, DLEQ.dleq_h2 = gen .* secret }
+
+    let extraPoint = gen .* secret
+        dleq  = DLEQ.DLEQ { DLEQ.dleq_g1 = curveGenerator, DLEQ.dleq_h1 = gS, DLEQ.dleq_g2 = gen, DLEQ.dleq_h2 = extraPoint }
         proof = DLEQ.generate challenge secret dleq
 
     return $ Escrow
@@ -160,10 +162,14 @@ escrow :: MonadRandom randomly
                     [Commitment],
                     DLEQ.Proof,
                     DLEQ.ParallelProofs)
-escrow t pubs = do
-    e <- escrowNew t
-    (eshares, commitments, proofs) <- escrowWith e pubs
-    return (escrowExtraGen e, escrowSecret e, eshares, commitments, escrowProof e, proofs)
+escrow t pubs@(Participants nlist)
+    | n < 3                = error "cannot create SCRAPE with less than 3 participants"
+    | t+2 > fromIntegral n = error ("cannot create SCRAPE with threshold=" ++ show t ++ " participants=" ++ show n ++ ". valid values of t are: t + 2 <= n")
+    | otherwise            = do
+        e <- escrowNew t
+        (eshares, commitments, proofs) <- escrowWith e pubs
+        return (escrowExtraGen e, escrowSecret e, eshares, commitments, escrowProof e, proofs)
+  where n = length nlist
 
 -- | Escrow with a given polynomial
 escrowWith :: MonadRandom randomly
