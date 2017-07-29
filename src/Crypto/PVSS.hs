@@ -278,25 +278,22 @@ verifySecret (ExtraGen gen) commitments (Secret secret) proof =
 recover :: [DecryptedShare]
         -> Secret
 recover shares =
-    Secret $ foldl' interpolate pointIdentity (zip shares [0..])
+    Secret $ foldl' (.+) pointIdentity $ map interpolate (zip shares [0..])
   where
     t = fromIntegral $ length shares
     aShares = fromList shares
 
-
-    interpolate :: Point -> (DecryptedShare, ShareId) -> Point
-    interpolate !result (share, sid) = result .+ (shareDecryptedVal share .* value)
+    interpolate :: (DecryptedShare, ShareId) -> Point
+    interpolate (share, sid) = shareDecryptedVal share .* calc 0 (keyFromNum 1)
       where
-        value = calc 0 (keyFromNum 1)
+        !si = keyFromNum $ decryptedShareID (aShares `unsafeIndex` fromIntegral sid)
         calc :: Integer -> Scalar -> Scalar
-        calc !j acc
+        calc !j !acc
             | j == t       = acc
             | j == sid     = calc (j+1) acc
             | otherwise    =
-                let sj   = decryptedShareID (aShares `unsafeIndex` fromIntegral j)
-                    si   = decryptedShareID (aShares `unsafeIndex` fromIntegral sid)
-                    dinv = keyInverse (keyFromNum sj #- keyFromNum si)
-                    e    = keyFromNum sj #* dinv
+                let sj = keyFromNum $ decryptedShareID (aShares `unsafeIndex` fromIntegral j)
+                    e  = sj #* keyInverse (sj #- si)
                  in calc (j+1) (acc #* e)
 
     unsafeIndex :: Array a -> Int -> a
