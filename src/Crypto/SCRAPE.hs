@@ -129,7 +129,7 @@ escrowNew :: MonadRandom randomly
           => Threshold
           -> randomly Escrow
 escrowNew threshold = do
-    poly <- Polynomial.generate (fromIntegral threshold)
+    poly <- Polynomial.generate (fromIntegral threshold) -- generate a polynomial of degree threshold-1
     gen  <- pointFromSecret <$> keyGenerate
 
     let secret = Polynomial.atZero poly
@@ -257,18 +257,27 @@ verifyDecryptedShare (EncryptedSi eshare,PublicKey pub,share) =
 
 -- | Verify that a secret recovered is the one escrow
 verifySecret :: ExtraGen
+             -> Threshold
              -> [Commitment]
              -> Secret
              -> DLEQ.Proof
              -> Bool
-verifySecret (ExtraGen gen) commitments (Secret secret) proof =
+verifySecret (ExtraGen gen) t commitments (Secret secret) proof =
     DLEQ.verify dleq proof
   where dleq = DLEQ.DLEQ
             { DLEQ.dleq_g1 = curveGenerator
             , DLEQ.dleq_h1 = secret
             , DLEQ.dleq_g2 = gen
-            , DLEQ.dleq_h2 = unCommitment (commitments !! 0)
+            , DLEQ.dleq_h2 = commitmentInterpolate
             }
+        t' = fromIntegral t
+        indices = take t' $ map keyFromNum [1..]
+
+        commitmentInterpolate =
+             foldl' (.+) pointIdentity $ map (uncurry lagrangeBasis)
+                                       $ zip [1..] (take t' commitments)
+        lagrangeBasis idx (Commitment x) =
+            x .* (Polynomial.lambda (fromList indices) (Offset $ idx - 1))
 
 reorderDecryptShares :: Participants
                      -> [(PublicKey, DecryptedShare)] -- the list of participant decrypted share identified by a public key
@@ -308,3 +317,4 @@ recover shares = Secret $ foldl' (.+) pointIdentity $ map interpolate (zip share
 
     unsafeIndex :: Array a -> Int -> a
     unsafeIndex v i = maybe (error $ "accessing index : " <> show i <> " out of bound") id $ (v ! Offset i)
+

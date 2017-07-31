@@ -1,16 +1,22 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE BangPatterns #-}
 module Crypto.PVSS.Polynomial
     ( Polynomial(..)
     , generate
     , evaluate
     , atZero
+    , lambda
     ) where
 
 import Crypto.PVSS.ECC
 import Crypto.Random
 import Control.Monad
 import Control.DeepSeq
-import Data.List
+import Foundation.Array
+import Foundation.Collection ((!), length, foldl')
+import Foundation (Offset(..), CountOf(..))
+import qualified Foundation as F ((+))
+import Prelude hiding (length)
 
 -- | a group of coefficient starting from the
 -- smallest degree.
@@ -33,3 +39,21 @@ evaluate (Polynomial a) v =
 
 atZero :: Polynomial -> Scalar
 atZero (Polynomial coeffs) = coeffs !! 0
+
+-- | Lambda polynomial value for lagrange interpolation
+--
+-- Lambda(i) = Product ( s(j) / (s(j) - s(i)) )
+--
+lambda :: Array Scalar -> Offset Scalar -> Scalar
+lambda xs i = factor (Offset 0) (keyFromNum 1)
+  where
+    !xi = xs !!! i
+    !(CountOf len) = length xs
+    factor !j !acc
+        | j == Offset len = acc
+        | j == i          = factor (j F.+ Offset 1) acc
+        | otherwise  =
+            let xj = xs !!! j
+                e  = xj #* keyInverse (xj #- xi)
+             in factor (j F.+ Offset 1) (acc #* e)
+    (!!!) arr idx = maybe (error $ "out of bound: " ++ show idx ++ " " ++ show i) id (arr ! idx)

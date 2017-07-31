@@ -127,19 +127,18 @@ scrapeDecryptVerify (KofN threshold nOrig) rng =
     (decryptedShares, _) = withDRG rng3 $ do
         mapM (\(kp,eshare) -> SCRAPE.shareDecrypt kp eshare) (zip participantAll eshares)
 
-{-
-scrapeSecretVerify :: Threshold -> Participants -> ChaChaDRG -> Property
-scrapeSecretVerify (Threshold threshold) (Participants nOrig) rng =
-    PVSS.verifySecret egen commitments sec secProof === True
+scrapeSecretVerify :: KofN -> ChaChaDRG -> Property
+scrapeSecretVerify (KofN threshold nOrig) rng =
+    SCRAPE.verifySecret egen threshold commitments sec secProof === True
   where
     n :: Integer
     n = max (threshold) nOrig
 
-    (participants, rng2) = withDRG rng $ replicateM (fromIntegral n) PVSS.keyPairGenerate
+    (participantAll, rng2) = withDRG rng $ replicateM (fromIntegral n) SCRAPE.keyPairGenerate
+    participants = SCRAPE.Participants $ map toPk participantAll
 
-    ((egen, sec, secProof, commitments, _), rng3) = withDRG rng2 $
-        SCRAPE.escrow threshold (map toPk participants)
-        -}
+    ((egen, sec, eshares, commitments, secProof, proofs), rng3) = withDRG rng2 $
+        SCRAPE.escrow threshold participants
 
 scrapeRecovery :: KofN -> ChaChaDRG -> Property
 scrapeRecovery (KofN threshold nOrig) rng =
@@ -169,6 +168,6 @@ main = defaultMain $ testGroup "PVSS"
     , testGroup "scrape"
         [ testProperty "encrypted-verified" scrapeEncryptVerify
         , testProperty "decrypted-verified" scrapeDecryptVerify
-        {-, testProperty "secret-verified" scrapeSecretVerify -}
+        , testProperty "secret-verified" scrapeSecretVerify
         , testProperty "recovery" scrapeRecovery ]
     ]
