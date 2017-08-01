@@ -161,8 +161,8 @@ escrow :: MonadRandom randomly
        -> [PublicKey]      -- ^ Participants public keys
        -> randomly (ExtraGen, Secret, DLEQ.Proof, [Commitment], [EncryptedShare])
 escrow t pubs
-    | t < 1              = error "cannot create SCRAPE with threshold < 1"
-    | t > fromIntegral n = error "cannot create SCRAPE with threshold above number of participants"
+    | t < 1              = error "cannot create PVSS with threshold < 1"
+    | t > fromIntegral n = error "cannot create PVSS with threshold above number of participants"
     | otherwise          = do
         e <- escrowNew t
         (commitments, eshares) <- escrowWith e pubs
