@@ -17,16 +17,16 @@ data KofN = KofN PVSS.Threshold Integer
     deriving (Show,Eq)
 
 instance Arbitrary Threshold where
-    arbitrary = Threshold <$> choose (2,5)
+    arbitrary = Threshold <$> choose (1,5)
 instance Arbitrary Participants where
-    arbitrary = Participants <$> choose (3,10)
+    arbitrary = Participants <$> choose (2,10)
 
 instance Arbitrary KofN where
     arbitrary = do
-        n <- choose (3,10)
-        t <- choose (2,5)
-        pure $ if t+2 >= n then KofN t (t+2)
-                           else KofN t n
+        n <- choose (3,20)
+        t <- choose (1,8)
+        pure $ if t >= n then KofN t (t+1)
+                         else KofN t n
 
 instance Show ChaChaDRG where
     show _ = "chachaDRG"

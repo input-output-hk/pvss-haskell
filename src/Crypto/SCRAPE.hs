@@ -67,6 +67,9 @@ newtype Commitment = Commitment { unCommitment :: Point }
 -- When the threshold is reached, as in the number of decrypted
 -- shares is equal or more than the threshold, the secret should
 -- be recoverable through the protocol
+--
+-- Threshold need to be a strictly positive, and less to number of participants
+-- given N the number of participants, this should hold: 1 <= t < N
 type Threshold = Integer
 
 -- | The ID associated with a share
@@ -129,7 +132,7 @@ escrowNew :: MonadRandom randomly
           => Threshold
           -> randomly Escrow
 escrowNew threshold = do
-    poly <- Polynomial.generate (fromIntegral threshold) -- generate a polynomial of degree threshold-1
+    poly <- Polynomial.generate (Polynomial.Degree $ fromIntegral threshold - 1)
     gen  <- pointFromSecret <$> keyGenerate
 
     let secret = Polynomial.atZero poly
@@ -163,9 +166,9 @@ escrow :: MonadRandom randomly
                     DLEQ.Proof,
                     DLEQ.ParallelProofs)
 escrow t pubs@(Participants nlist)
-    | n < 2                = error "cannot create SCRAPE with less than 3 participants"
-    | t+2 > fromIntegral n = error ("cannot create SCRAPE with threshold=" ++ show t ++ " participants=" ++ show n ++ ". valid values of t are: t + 2 <= n")
-    | otherwise            = do
+    | t < 1               = error "cannot create SCRAPE with threshold < 1"
+    | t >= fromIntegral n = error "cannot create SCRAPE with threshold equal/above number of participants"
+    | otherwise           = do
         e <- escrowNew t
         (eshares, commitments, proofs) <- escrowWith e pubs
         return (escrowExtraGen e, escrowSecret e, eshares, commitments, escrowProof e, proofs)
@@ -238,7 +241,7 @@ verifyEncryptedShares (ExtraGen g) t commitments proofs encryptedShares (Partici
     makeDLEQ (Commitment vi) (PublicKey pki) (EncryptedSi esi) =
         DLEQ.DLEQ g vi pki esi
     rdCheck = do
-        poly <- Polynomial.generate (fromIntegral $ n - t - 1) -- hardcoded
+        poly <- Polynomial.generate (Polynomial.Degree $ fromIntegral $ n - t - 1)
         let cPerp = for indexes $ \evalPoint ->
                         vi evalPoint #* Polynomial.evaluate poly (keyFromNum evalPoint)
         let v = mulAndSum $ zipWith (\(Commitment c) cip -> (c,cip)) commitments cPerp

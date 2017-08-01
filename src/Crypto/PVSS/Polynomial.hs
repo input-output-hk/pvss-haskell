@@ -2,6 +2,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Crypto.PVSS.Polynomial
     ( Polynomial(..)
+    , Degree(..)
     , generate
     , evaluate
     , atZero
@@ -23,13 +24,22 @@ import Prelude hiding (length)
 newtype Polynomial = Polynomial [Scalar]
     deriving (Show,Eq,NFData)
 
--- | Generate a polynomial of degree i-1
+-- | Degree of a polynomial
 --
--- a0 + a1 * x + a2 * x^2 + ai-1 * x^i-1
-generate :: MonadRandom randomly => Int -> randomly Polynomial
-generate i
-    | i <= 0    = error ("invalid polynomial degree: " ++ show i)
-    | otherwise = Polynomial <$> replicateM i keyGenerate
+-- Degree 0 : constant : P(x) = C
+-- Degree 1 : linear   : P(x) = C0 + C1 * x
+-- ..
+-- Degree n :          : P(x) = C0 + C1 * x + ... + Cn * x^n
+newtype Degree = Degree Int
+    deriving (Show,Eq,NFData)
+
+-- | Generate a polynomial of the specified degree n
+--
+-- a0 + a1 * x + a2 * x^2 + ... + an-1 * x^n-1
+generate :: MonadRandom randomly => Degree -> randomly Polynomial
+generate (Degree i)
+    | i < 0     = error ("invalid polynomial degree: " ++ show i)
+    | otherwise = Polynomial <$> replicateM (i+1) keyGenerate
 
 evaluate :: Polynomial -> Scalar -> Scalar
 evaluate (Polynomial a) v =

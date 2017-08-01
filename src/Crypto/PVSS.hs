@@ -70,6 +70,9 @@ newtype Commitment = Commitment { unCommitment :: Point }
     deriving (Show,Eq,NFData,Binary)
 
 -- | The number of shares needed to reconstitute the secret
+--
+-- Threshold need to be a strictly positive, and less or equal to number of participants
+-- given N the number of participants, this should hold: 1 <= t <= N
 type Threshold = Integer
 
 -- | The number of parties in the scheme
@@ -131,7 +134,7 @@ escrowNew :: MonadRandom randomly
           => Threshold
           -> randomly Escrow
 escrowNew threshold = do
-    poly <- Polynomial.generate (fromIntegral threshold)
+    poly <- Polynomial.generate (Polynomial.Degree $ fromIntegral threshold - 1)
     gen  <- pointFromSecret <$> keyGenerate
 
     let secret = Polynomial.atZero poly
@@ -157,10 +160,14 @@ escrow :: MonadRandom randomly
        => Threshold        -- ^ PVSS scheme configuration n/t threshold
        -> [PublicKey]      -- ^ Participants public keys
        -> randomly (ExtraGen, Secret, DLEQ.Proof, [Commitment], [EncryptedShare])
-escrow t pubs = do
-    e <- escrowNew t
-    (commitments, eshares) <- escrowWith e pubs
-    return (escrowExtraGen e, escrowSecret e, escrowProof e, commitments, eshares)
+escrow t pubs
+    | t < 1              = error "cannot create SCRAPE with threshold < 1"
+    | t > fromIntegral n = error "cannot create SCRAPE with threshold above number of participants"
+    | otherwise          = do
+        e <- escrowNew t
+        (commitments, eshares) <- escrowWith e pubs
+        return (escrowExtraGen e, escrowSecret e, escrowProof e, commitments, eshares)
+  where n = length pubs
 
 -- | Escrow with a given polynomial
 escrowWith :: MonadRandom randomly
@@ -273,7 +280,7 @@ verifySecret (ExtraGen gen) commitments (Secret secret) proof =
 
 -- | Recover the DhSecret used
 --
--- Need to pass the correct amount of shares (threshold),
+-- Need to pass the correct amount of shares (# threshold),
 -- preferably from a 'getValidRecoveryShares' call
 recover :: [DecryptedShare]
         -> Secret
