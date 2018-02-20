@@ -1,6 +1,6 @@
 # compiler supported and their equivalent LTS
-compiler: ghc-8.0 lts-9.26
-compiler: ghc-8.0-scrape-bds lts-9.26
+compiler: ghc-8.0 lts-9.21
+compiler: ghc-8.0-scrape-bds lts-9.21
 compiler: ghc-8.2 lts-10.5
 compiler: ghc-8.2-scrape-bds lts-10.5
 
