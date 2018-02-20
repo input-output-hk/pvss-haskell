@@ -1,0 +1,22 @@
+# compiler supported and their equivalent LTS
+compiler: ghc-8.0 lts-9.26
+compiler: ghc-8.0-scrape-bds lts-9.26
+compiler: ghc-8.2 lts-10.5
+compiler: ghc-8.2-scrape-bds lts-10.5
+
+# options
+option: scrape-bds  extradep=mcl-1.0.1 flag=pvss:scrape-bds
+
+# builds
+build: ghc-8.0
+build: ghc-8.0-scrape-bds scrape-bds allowed-failure
+build: ghc-8.2
+build: ghc-8.2-scrape-bds scrape-bds allowed-failure
+
+# packages
+package: '.'
+
+# extra builds
+hlint: allowed-failure
+weeder: allowed-failure
+coverall: false
